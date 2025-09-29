@@ -144,8 +144,6 @@ def add_red_noise(psr: SimulatedPulsar, log10_amplitude: float, spectral_index: 
     """Add red noise with P(f) = A^2 / (12 pi^2) (f * year)^-gamma,
     using `components` Fourier bases.
     Optionally take a pseudorandom-number-generator seed."""
-    psr.update_added_signals('{}_red_noise'.format(psr.name), 
-                             {'amplitude': log10_amplitude, 'spectral_index': spectral_index})
     A = 10**(log10_amplitude)
     gamma = spectral_index
     # nobs = len(psr.toas.table)
@@ -163,6 +161,11 @@ def add_red_noise(psr: SimulatedPulsar, log10_amplitude: float, spectral_index: 
     prior = A**2 * (freqs/fyr)**(-gamma) / (12 * np.pi**2 * Tspan) * YEAR_IN_SEC**3
     y = np.sqrt(prior) * np.random.randn(freqs.size)
     dt = np.dot(F,y) * u.s
+    
+    psr.update_added_signals('{}_red_noise'.format(psr.name), 
+                             {'amplitude': log10_amplitude, 'spectral_index': spectral_index},
+                             dt)
+    
     psr.toas.adjust_TOAs(TimeDelta(dt.to('day')))
     psr.update_residuals()
     
@@ -241,9 +244,6 @@ def add_gwb(
     :param howml: Lowest frequency is 1/(howml * T)
     :returns: list of residuals for each pulsar
     """
-    for psr in psrs:
-        psr.update_added_signals('{}_gwb'.format(psr.name), 
-                                 {'amplitude': log10_amplitude, 'spectral_index': spectral_index})
 
     if seed is not None:
         np.random.seed(seed)
@@ -364,5 +364,8 @@ def add_gwb(
     for psr in psrs:
         dt = res_gw[ct] / 86400.0 * u.day
         psr.toas.adjust_TOAs(TimeDelta(dt.to('day')))
+        psr.update_added_signals('{}_gwb'.format(psr.name), 
+                                 {'amplitude': log10_amplitude, 'spectral_index': spectral_index},
+                                 dt)
         psr.update_residuals()
         ct += 1
